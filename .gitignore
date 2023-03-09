@@ -1,0 +1,6 @@
+.idea
+.vscode
+
+.env
+
+__debug_bin
