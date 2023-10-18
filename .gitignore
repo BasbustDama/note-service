@@ -1,6 +1,7 @@
 .idea
 .vscode
 
-.env
+*.env
 
-__debug_bin
+/build/
+/vendor/
