@@ -11,7 +11,9 @@ import (
 )
 
 func main() {
-	conn := sqlx.MustOpen("postgres://postgres:postgres@192.168.3.28:5432/note_database?sslmode=disable")
+	// TODO: load config
+
+	conn := sqlx.MustOpen("")
 	defer conn.Close()
 
 	postgresDatabase := postgres.New(conn)
