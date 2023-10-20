@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"errors"
-	"log"
 	"log/slog"
 
 	"github.com/BasbustDama/note-service/internal/database"
@@ -21,7 +20,8 @@ type (
 	NoteDatabase interface {
 		Insert(note *entity.Note) error
 		SelectOne(id int) (entity.Note, error)
-		SelectMany(offset, limit int) ([]entity.Note, int, error)
+		SelectMany(offset, limit int) ([]entity.Note, error)
+		SelectCount() (int, error)
 		Update(title, description *string) error
 		Delete(id int) error
 	}
@@ -61,10 +61,11 @@ func (usecase *noteUsecase) Delete(id int) error {
 func (usecase *noteUsecase) Get(id int) (entity.Note, error) {
 	note, err := usecase.Database.SelectOne(id)
 	if err != nil {
-		log.Println(err.Error())
 		if errors.Is(err, database.ErrorNotFound) {
 			return entity.Note{}, entity.ErrorNotFound
 		}
+
+		slog.Error(err.Error(), slog.Int("note_id", id))
 
 		return entity.Note{}, entity.ErrorInternal
 	}
@@ -73,7 +74,19 @@ func (usecase *noteUsecase) Get(id int) (entity.Note, error) {
 }
 
 func (usecase *noteUsecase) GetList(offset int, limit int) ([]entity.Note, int, error) {
-	panic("unimplemented")
+	note, err := usecase.Database.SelectMany(offset, limit)
+	if err != nil {
+		slog.Error(err.Error())
+		return nil, 0, entity.ErrorInternal
+	}
+
+	count, err := usecase.Database.SelectCount()
+	if err != nil {
+		slog.Error(err.Error())
+		return nil, 0, entity.ErrorInternal
+	}
+
+	return note, count, nil
 }
 
 func (usecase *noteUsecase) Update(title *string, description *string) error {

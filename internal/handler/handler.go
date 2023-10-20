@@ -11,6 +11,7 @@ import (
 type noteUsecase interface {
 	Create(title string, description string) (entity.Note, error)
 	Get(id int) (entity.Note, error)
+	GetList(offset int, limit int) ([]entity.Note, int, error)
 	Delete(id int) error
 }
 
@@ -20,7 +21,7 @@ func New(usecase noteUsecase) http.Handler {
 	noteGroup := engine.Group("/note")
 	{
 		noteGroup.POST("/", createNote(usecase))
-		noteGroup.GET("/", getListNote())
+		noteGroup.GET("/", getListNote(usecase))
 		noteGroup.GET("/:id", getNote(usecase))
 		noteGroup.PUT("/:id", updateNote())
 		noteGroup.DELETE("/:id", deleteNote(usecase))
@@ -78,8 +79,34 @@ func getNote(usecase getUsecase) gin.HandlerFunc {
 	}
 }
 
-func getListNote() gin.HandlerFunc {
-	return func(ctx *gin.Context) {}
+type getListUsecase interface {
+	GetList(offset int, limit int) ([]entity.Note, int, error)
+}
+
+func getListNote(usecase getListUsecase) gin.HandlerFunc {
+	type requestParams struct {
+		Offset int `form:"offset" binding:"omitempty,gte=0"`
+		Limit  int `form:"limit" binding:"required,oneof=10 20 50"`
+	}
+
+	return func(ctx *gin.Context) {
+		var request requestParams
+		if err := ctx.ShouldBindQuery(&request); err != nil {
+			ctx.String(http.StatusBadRequest, err.Error())
+			return
+		}
+
+		noteList, count, err := usecase.GetList(request.Offset, request.Limit)
+		if err != nil {
+			errorHandler(ctx, err)
+			return
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{
+			"data":  noteList,
+			"count": count,
+		})
+	}
 }
 
 func updateNote() gin.HandlerFunc {

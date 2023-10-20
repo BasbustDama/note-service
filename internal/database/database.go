@@ -21,3 +21,12 @@ func (model NoteModel) ToEntity() entity.Note {
 		Description: model.Description,
 	}
 }
+
+func ModelListToEntity(modelList []NoteModel) []entity.Note {
+	entityList := make([]entity.Note, 0, len(modelList))
+	for _, model := range modelList {
+		entityList = append(entityList, model.ToEntity())
+	}
+
+	return entityList
+}
