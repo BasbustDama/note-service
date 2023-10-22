@@ -13,7 +13,7 @@ type (
 		Create(title string, description string) (entity.Note, error)
 		Get(id int) (entity.Note, error)
 		GetList(offset, limit int) ([]entity.Note, int, error)
-		Update(title, description *string) error
+		Update(id int, title *string, description *string) error
 		Delete(id int) error
 	}
 
@@ -22,7 +22,7 @@ type (
 		SelectOne(id int) (entity.Note, error)
 		SelectMany(offset, limit int) ([]entity.Note, error)
 		SelectCount() (int, error)
-		Update(title, description *string) error
+		Update(id int, title *string, description *string) error
 		Delete(id int) error
 	}
 )
@@ -89,6 +89,21 @@ func (usecase *noteUsecase) GetList(offset int, limit int) ([]entity.Note, int, 
 	return note, count, nil
 }
 
-func (usecase *noteUsecase) Update(title *string, description *string) error {
-	panic("unimplemented")
+func (usecase *noteUsecase) Update(id int, title *string, description *string) error {
+	if _, err := usecase.Database.SelectOne(id); err != nil {
+		if errors.Is(err, database.ErrorNotFound) {
+			return entity.ErrorNotFound
+		}
+
+		slog.Error(err.Error(), slog.Int("note_id", id))
+		return entity.ErrorInternal
+	}
+
+	err := usecase.Database.Update(id, title, description)
+	if err != nil {
+		slog.Error(err.Error())
+		return entity.ErrorInternal
+	}
+
+	return nil
 }

@@ -3,6 +3,8 @@ package postgres
 import (
 	"database/sql"
 	"errors"
+	"fmt"
+	"strings"
 
 	core "github.com/BasbustDama/note-service/internal/database"
 	"github.com/BasbustDama/note-service/internal/entity"
@@ -73,8 +75,36 @@ func (database *PostgresDatabase) SelectCount() (int, error) {
 	return count, nil
 }
 
-func (database *PostgresDatabase) Update(title, description *string) error {
-	panic("unimplemented")
+func (database *PostgresDatabase) Update(id int, title *string, description *string) error {
+	fields := make([]string, 0, 1)
+	args := make([]any, 0, 2)
+
+	if title != nil {
+		fields = append(fields, "title")
+		args = append(args, *title)
+	}
+
+	if description != nil {
+		fields = append(fields, "description")
+		args = append(args, *description)
+	}
+
+	args = append(args, id)
+
+	setValues := make([]string, len(fields))
+	for index, field := range fields {
+		setValues[index] = fmt.Sprintf("%s = $%d", field, index+1)
+	}
+
+	query := fmt.Sprintf("UPDATE note SET %s WHERE id = $%d",
+		strings.Join(setValues, ", "), len(setValues)+1)
+
+	_, err := database.Connection.Exec(query, args...)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (database *PostgresDatabase) Delete(id int) error {

@@ -12,6 +12,7 @@ type noteUsecase interface {
 	Create(title string, description string) (entity.Note, error)
 	Get(id int) (entity.Note, error)
 	GetList(offset int, limit int) ([]entity.Note, int, error)
+	Update(id int, title *string, description *string) error
 	Delete(id int) error
 }
 
@@ -23,7 +24,7 @@ func New(usecase noteUsecase) http.Handler {
 		noteGroup.POST("/", createNote(usecase))
 		noteGroup.GET("/", getListNote(usecase))
 		noteGroup.GET("/:id", getNote(usecase))
-		noteGroup.PUT("/:id", updateNote())
+		noteGroup.PUT("/:id", updateNote(usecase))
 		noteGroup.DELETE("/:id", deleteNote(usecase))
 	}
 
@@ -42,7 +43,7 @@ func createNote(usecase createUsecase) gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 		var request requestBody
-		if err := ctx.ShouldBindJSON(&request); err != nil {
+		if err := ctx.ShouldBind(&request); err != nil {
 			ctx.String(http.StatusBadRequest, err.Error())
 			return
 		}
@@ -85,7 +86,7 @@ type getListUsecase interface {
 
 func getListNote(usecase getListUsecase) gin.HandlerFunc {
 	type requestParams struct {
-		Offset int `form:"offset" binding:"omitempty,gte=0"`
+		Offset int `form:"offset" binding:"omitempty,gte=1"`
 		Limit  int `form:"limit" binding:"required,oneof=10 20 50"`
 	}
 
@@ -109,8 +110,43 @@ func getListNote(usecase getListUsecase) gin.HandlerFunc {
 	}
 }
 
-func updateNote() gin.HandlerFunc {
-	return func(ctx *gin.Context) {}
+type updateUsecase interface {
+	Update(id int, title *string, description *string) error
+}
+
+func updateNote(usecase updateUsecase) gin.HandlerFunc {
+	type request struct {
+		ID          int     `json:"-" binding:"required,gte=1"`
+		Title       *string `json:"title" binding:"omitempty,min=1,max=255"`
+		Description *string `json:"description" binding:"omitempty,max=4096"`
+	}
+
+	return func(ctx *gin.Context) {
+		noteId, err := strconv.Atoi(ctx.Param("id"))
+		if err != nil {
+			ctx.String(http.StatusBadRequest, err.Error())
+			return
+		}
+
+		request := request{ID: noteId}
+		if err := ctx.ShouldBind(&request); err != nil {
+			ctx.String(http.StatusBadRequest, err.Error())
+			return
+		}
+
+		if request.Title == nil && request.Description == nil {
+			ctx.String(http.StatusBadRequest, "Title and description is null")
+			return
+		}
+
+		err = usecase.Update(request.ID, request.Title, request.Description)
+		if err != nil {
+			errorHandler(ctx, err)
+			return
+		}
+
+		ctx.String(http.StatusOK, "Success")
+	}
 }
 
 type deleteUsecase interface {
