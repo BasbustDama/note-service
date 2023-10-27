@@ -14,6 +14,11 @@ type NoteModel struct {
 	Description string `db:"description"`
 }
 
+type CustomerModel struct {
+	Username string `db:"username"`
+	Password string `db:"password"`
+}
+
 func (model NoteModel) ToEntity() entity.Note {
 	return entity.Note{
 		ID:          model.ID,

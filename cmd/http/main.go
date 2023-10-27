@@ -3,8 +3,8 @@ package main
 import (
 	"github.com/BasbustDama/note-service/config"
 	"github.com/BasbustDama/note-service/internal/database/postgres"
-	"github.com/BasbustDama/note-service/internal/handler"
-	"github.com/BasbustDama/note-service/internal/usecase"
+	noteHandler "github.com/BasbustDama/note-service/internal/handler/note"
+	noteUsecase "github.com/BasbustDama/note-service/internal/usecase/note"
 	"github.com/BasbustDama/note-service/pkg/server"
 	"github.com/BasbustDama/note-service/pkg/sqlx"
 
@@ -19,9 +19,9 @@ func main() {
 
 	postgresDatabase := postgres.New(conn)
 
-	noteUsecase := usecase.New(postgresDatabase)
+	noteUsecase := noteUsecase.New(postgresDatabase)
 
-	handler := handler.New(noteUsecase)
+	handler := noteHandler.New(noteUsecase)
 
 	server := server.New(handler, config.HttpPort)
 	server.Run()
