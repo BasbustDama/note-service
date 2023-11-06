@@ -1,11 +1,14 @@
 package noteUsecase
 
 import (
+	"context"
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/BasbustDama/note-service/internal/database"
 	"github.com/BasbustDama/note-service/internal/entity"
+	"github.com/BasbustDama/note-service/internal/repository"
 )
 
 type (
@@ -16,23 +19,16 @@ type (
 		Update(id int, title *string, description *string) error
 		Delete(id int) error
 	}
-
-	NoteDatabase interface {
-		Insert(note *entity.Note) error
-		SelectOne(id int) (entity.Note, error)
-		SelectMany(offset, limit int) ([]entity.Note, error)
-		SelectCount() (int, error)
-		Update(id int, title *string, description *string) error
-		Delete(id int) error
-	}
 )
 
 type noteUsecase struct {
-	Database NoteDatabase
+	Database repository.RepositoryManager
+
+	defaultTimeout time.Duration
 }
 
-func New(database NoteDatabase) NoteUsecase {
-	return &noteUsecase{Database: database}
+func New(database repository.RepositoryManager, timeout time.Duration) NoteUsecase {
+	return &noteUsecase{Database: database, defaultTimeout: timeout}
 }
 
 func (usecase *noteUsecase) Create(title string, description string) (entity.Note, error) {
@@ -41,8 +37,7 @@ func (usecase *noteUsecase) Create(title string, description string) (entity.Not
 		Description: description,
 	}
 
-	err := usecase.Database.Insert(&note)
-	if err != nil {
+	if err := usecase.Database.GetNoteRepository().Insert(&note); err != nil {
 		slog.Error(err.Error())
 		return entity.Note{}, entity.ErrorInternal
 	}
@@ -51,7 +46,10 @@ func (usecase *noteUsecase) Create(title string, description string) (entity.Not
 }
 
 func (usecase *noteUsecase) Delete(id int) error {
-	if err := usecase.Database.Delete(id); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), usecase.defaultTimeout)
+	defer cancel()
+
+	if err := usecase.Database.GetNoteRepository().Delete(ctx, id); err != nil {
 		return entity.ErrorInternal
 	}
 
@@ -59,14 +57,13 @@ func (usecase *noteUsecase) Delete(id int) error {
 }
 
 func (usecase *noteUsecase) Get(id int) (entity.Note, error) {
-	note, err := usecase.Database.SelectOne(id)
+	note, err := usecase.Database.GetNoteRepository().SelectOne(id)
 	if err != nil {
 		if errors.Is(err, database.ErrorNotFound) {
 			return entity.Note{}, entity.ErrorNotFound
 		}
 
 		slog.Error(err.Error(), slog.Int("note_id", id))
-
 		return entity.Note{}, entity.ErrorInternal
 	}
 
@@ -74,13 +71,14 @@ func (usecase *noteUsecase) Get(id int) (entity.Note, error) {
 }
 
 func (usecase *noteUsecase) GetList(offset int, limit int) ([]entity.Note, int, error) {
-	note, err := usecase.Database.SelectMany(offset, limit)
+	noteRepository := usecase.Database.GetNoteRepository()
+	note, err := noteRepository.SelectMany(offset, limit)
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, 0, entity.ErrorInternal
 	}
 
-	count, err := usecase.Database.SelectCount()
+	count, err := noteRepository.SelectCount()
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, 0, entity.ErrorInternal
@@ -90,7 +88,8 @@ func (usecase *noteUsecase) GetList(offset int, limit int) ([]entity.Note, int, 
 }
 
 func (usecase *noteUsecase) Update(id int, title *string, description *string) error {
-	if _, err := usecase.Database.SelectOne(id); err != nil {
+	noteRepository := usecase.Database.GetNoteRepository()
+	if _, err := noteRepository.SelectOne(id); err != nil {
 		if errors.Is(err, database.ErrorNotFound) {
 			return entity.ErrorNotFound
 		}
@@ -99,7 +98,7 @@ func (usecase *noteUsecase) Update(id int, title *string, description *string) e
 		return entity.ErrorInternal
 	}
 
-	err := usecase.Database.Update(id, title, description)
+	err := noteRepository.Update(id, title, description)
 	if err != nil {
 		slog.Error(err.Error())
 		return entity.ErrorInternal

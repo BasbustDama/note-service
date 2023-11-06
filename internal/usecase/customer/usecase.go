@@ -11,7 +11,7 @@ import (
 type (
 	CustomerUsecase interface {
 		Create(username string, password string) (entity.Customer, error)
-		GetByID(customerId int) (entity.Customer, error)
+		GetByID(id int) (entity.Customer, error)
 		GetByCreds(username string, passwordHash string) (entity.Customer, error)
 	}
 
@@ -59,22 +59,20 @@ func (usecase *customerUsecase) GetByCreds(username string, passwordHash string)
 		}
 
 		slog.Error(err.Error(), slog.String("username", username), slog.String("passwordHash", passwordHash))
-
 		return entity.Customer{}, entity.ErrorInternal
 	}
 
 	return customer, nil
 }
 
-func (usecase *customerUsecase) GetByID(customerId int) (entity.Customer, error) {
-	customer, err := usecase.Database.SelectByID(customerId)
+func (usecase *customerUsecase) GetByID(id int) (entity.Customer, error) {
+	customer, err := usecase.Database.SelectByID(id)
 	if err != nil {
 		if errors.Is(err, database.ErrorNotFound) {
 			return entity.Customer{}, entity.ErrorNotFound
 		}
 
-		slog.Error(err.Error(), slog.Int("customer_id", customerId))
-
+		slog.Error(err.Error(), slog.Int("customer_id", id))
 		return entity.Customer{}, entity.ErrorInternal
 	}
 

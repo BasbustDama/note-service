@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/BasbustDama/note-service/internal/entity"
+	"github.com/BasbustDama/note-service/internal/handler/errors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -12,7 +13,7 @@ type getUsecase interface {
 	Get(id int) (entity.Note, error)
 }
 
-func getNote(usecase getUsecase) gin.HandlerFunc {
+func NewGetNote(usecase getUsecase) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		noteId, err := strconv.Atoi(ctx.Param("id"))
 		if err != nil {
@@ -22,7 +23,7 @@ func getNote(usecase getUsecase) gin.HandlerFunc {
 
 		note, err := usecase.Get(noteId)
 		if err != nil {
-			errorHandler(ctx, err)
+			errors.ErrorHandler(ctx, err)
 			return
 		}
 

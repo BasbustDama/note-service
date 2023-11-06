@@ -1,4 +1,4 @@
-package noteHandler
+package errors
 
 import (
 	"net/http"
@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func errorHandler(ctx *gin.Context, err error) {
+func ErrorHandler(ctx *gin.Context, err error) {
 	if appErr, ok := err.(entity.AppError); ok {
 		switch appErr {
 		case entity.ErrorBadRequest:

@@ -1,4 +1,4 @@
-package noteHandler
+package customerHandler
 
 import (
 	"net/http"
@@ -9,13 +9,13 @@ import (
 )
 
 type createUsecase interface {
-	Create(title string, description string) (entity.Note, error)
+	Create(username string, password string) (entity.Customer, error)
 }
 
-func NewCreateNote(usecase createUsecase) gin.HandlerFunc {
+func NewCreateCustomer(usecase createUsecase) gin.HandlerFunc {
 	type requestBody struct {
-		Title       string `json:"title" binding:"required,max=255"`
-		Description string `json:"description" binding:"omitempty,max=4096"`
+		Username string `json:"username" binding:"required,max=255"`
+		Password string `json:"password" binding:"required,maax=512"`
 	}
 
 	return func(ctx *gin.Context) {
@@ -25,12 +25,12 @@ func NewCreateNote(usecase createUsecase) gin.HandlerFunc {
 			return
 		}
 
-		note, err := usecase.Create(request.Title, request.Description)
+		customer, err := usecase.Create(request.Username, request.Password)
 		if err != nil {
 			errors.ErrorHandler(ctx, err)
 			return
 		}
 
-		ctx.JSON(http.StatusOK, note)
+		ctx.JSON(http.StatusOK, customer)
 	}
 }
